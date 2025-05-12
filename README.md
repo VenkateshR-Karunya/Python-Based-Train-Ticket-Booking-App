@@ -27,7 +27,7 @@ A desktop-based Railway Ticket Booking System developed using **Python**, **Tkin
 
 ## 📦 Installation Guide
 
-### 1. Clone the Repository
+### Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/railway-ticket-booking.git
