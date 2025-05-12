@@ -2,31 +2,33 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import psycopg2
 
-# SQL Connection 
+# PostgreSQL Initializing
 def get_db_connection():
     return psycopg2.connect(
-    dbname="oidfd",
+        dbname="oidfd",
         user="postgres",
         password="leave",
         host="localhost",
         port="5432"
     )
 
-#Functionality
+# Bookings App Function
 def open_booking_window():
     login_window.destroy()
 
     root = tk.Tk()
     root.title("Railway Ticket Booking System")
-    root.geometry("700x500")
+    root.geometry("1200x600")
 
     def book_ticket():
         name = name_entry.get()
         age = age_entry.get()
         gender = gender_var.get()
         train = train_var.get()
+        from_loc = from_entry.get()
+        to_loc = to_entry.get()
 
-        if not name or not age or not gender or not train:
+        if not name or not age or not gender or not train or not from_loc or not to_loc:
             messagebox.showwarning("Input Error", "All fields are required.")
             return
 
@@ -40,8 +42,8 @@ def open_booking_window():
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                "INSERT INTO bookings (name, age, gender, train) VALUES (%s, %s, %s, %s)",
-                (name, age, gender, train)
+                "INSERT INTO bookings (name, age, gender, train, source, destination) VALUES (%s, %s, %s, %s, %s, %s)",
+                (name, age, gender, train, from_loc, to_loc)
             )
             conn.commit()
             cur.close()
@@ -57,12 +59,14 @@ def open_booking_window():
         age_entry.delete(0, tk.END)
         gender_var.set(None)
         train_var.set(trains[0])
+        from_entry.delete(0, tk.END)
+        to_entry.delete(0, tk.END)
 
     def update_booking_list():
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT name, age, gender, train FROM bookings")
+            cur.execute("SELECT name, age, gender, train, source, destination FROM bookings")
             records = cur.fetchall()
             cur.close()
             conn.close()
@@ -85,18 +89,18 @@ def open_booking_window():
 
         try:
             item = booking_list.item(selected_item)
-            name, age, gender, train = item['values']
+            name, age, gender, train, source, destination = item['values']
 
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
-    DELETE FROM bookings
-    WHERE ctid IN (
-        SELECT ctid FROM bookings 
-        WHERE name = %s AND age = %s AND gender = %s AND train = %s
-        LIMIT 1
-    )
-""", (name, age, gender, train))
+                DELETE FROM bookings
+                WHERE ctid IN (
+                    SELECT ctid FROM bookings 
+                    WHERE name = %s AND age = %s AND gender = %s AND train = %s AND source = %s AND destination = %s
+                    LIMIT 1
+                )
+            """, (name, age, gender, train, source, destination))
 
             conn.commit()
             cur.close()
@@ -107,7 +111,6 @@ def open_booking_window():
         except Exception as e:
             messagebox.showerror("Database Error", str(e))
 
-    
     tk.Label(root, text="Passenger Name:").place(x=30, y=30)
     name_entry = tk.Entry(root)
     name_entry.place(x=150, y=30)
@@ -127,28 +130,34 @@ def open_booking_window():
     train_menu = ttk.Combobox(root, textvariable=train_var, values=trains, state="readonly")
     train_menu.place(x=150, y=150)
 
-    
-    tk.Button(root, text="Book Ticket", command=book_ticket, bg="green", fg="white").place(x=150, y=200)
-    tk.Button(root, text="Clear", command=clear_fields).place(x=250, y=200)
-    tk.Button(root, text="Cancel Ticket", command=cancel_ticket, bg="red", fg="white").place(x=320, y=200)
+    tk.Label(root, text="From:").place(x=30, y=190)
+    from_entry = tk.Entry(root)
+    from_entry.place(x=150, y=190)
 
-    columns = ("Name", "Age", "Gender", "Train")
+    tk.Label(root, text="To:").place(x=30, y=230)
+    to_entry = tk.Entry(root)
+    to_entry.place(x=150, y=230)
+
+    tk.Button(root, text="Book Ticket", command=book_ticket, bg="green", fg="white").place(x=150, y=270)
+    tk.Button(root, text="Clear", command=clear_fields).place(x=250, y=270)
+    tk.Button(root, text="Cancel Ticket", command=cancel_ticket, bg="red", fg="white").place(x=340, y=270)
+
+    columns = ("Name", "Age", "Gender", "Train", "From", "To")
     booking_list = ttk.Treeview(root, columns=columns, show="headings")
     for col in columns:
         booking_list.heading(col, text=col)
         booking_list.column(col, anchor=tk.CENTER)
 
-    booking_list.place(x=30, y=250, width=640, height=200)
+    booking_list.place(x=10, y=320, width=1200, height=200)
 
     update_booking_list()
     root.mainloop()
 
-#Login Window
+# Login Window
 login_window = tk.Tk()
 login_window.title("Login")
 login_window.geometry("300x200")
-
-#Credentials (static for now)
+# Credentials - Only one for now
 USERNAME = "admin"
 PASSWORD = "1234"
 
